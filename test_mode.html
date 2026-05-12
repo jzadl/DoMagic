@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DoMagic - Emulated Device (WebUSB)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #0d0a0f;
+            color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #1d1724;
+            padding: 2rem;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 500px;
+        }
+        h1 { color: #8b5cf6; text-align: center; }
+        .field { margin-bottom: 1rem; }
+        label { display: block; color: #a78bfa; font-size: 0.8rem; margin-bottom: 0.3rem; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            background: #120e16;
+            border: 1px solid #4f378b;
+            color: white;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        .btn {
+            width: 100%;
+            background-color: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        .status {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 12px;
+            background: #000;
+            font-family: monospace;
+            font-size: 0.85rem;
+            height: 100px;
+            overflow-y: auto;
+            color: #10b981;
+        }
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #8b5cf6;
+            background: transparent;
+            color: #8b5cf6;
+            cursor: pointer;
+        }
+        .mode-btn.active {
+            background: #8b5cf6;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fake Device Emulator</h1>
+        <p style="text-align:center; color:#c4b5fd; font-size: 0.9rem;">Connect your PC to the phone via USB</p>
+
+        <div class="mode-selector">
+            <button id="mode-adb" class="mode-btn active" onclick="setMode('adb')">ADB Mode</button>
+            <button id="mode-fastboot" class="mode-btn" onclick="setMode('fastboot')">Fastboot Mode</button>
+        </div>
+
+        <div class="field">
+            <label>Manufacturer</label>
+            <input type="text" id="mfr" value="Google">
+        </div>
+        <div class="field">
+            <label>Model</label>
+            <input type="text" id="model" value="Pixel 7 Pro">
+        </div>
+        <div class="field">
+            <label>Build Number</label>
+            <input type="text" id="build" value="TQ3A.230605.012">
+        </div>
+        <div class="field">
+            <label>ABI</label>
+            <select id="abi">
+                <option value="arm64-v8a">arm64-v8a</option>
+                <option value="armeabi-v7a">armeabi-v7a</option>
+                <option value="x86_64">x86_64</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>Bootloader State</label>
+            <select id="bootloader">
+                <option value="unlocked">Unlocked</option>
+                <option value="locked">Locked</option>
+            </select>
+        </div>
+
+        <button class="btn" onclick="startEmulation()">Start Emulation</button>
+
+        <div id="log" class="status">
+            [System] Waiting for user...
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'adb';
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('mode-adb').classList.toggle('active', mode === 'adb');
+            document.getElementById('mode-fastboot').classList.toggle('active', mode === 'fastboot');
+            log(`Switched to ${mode.toUpperCase()} mode`);
+        }
+
+        function log(msg) {
+            const l = document.getElementById('log');
+            l.innerHTML += `> ${msg}<br>`;
+            l.scrollTop = l.scrollHeight;
+        }
+
+        async function startEmulation() {
+            log("Attempting to initialize USB Gadget emulation...");
+
+            if (!navigator.usb) {
+                log("Error: WebUSB not supported in this browser.");
+                return;
+            }
+
+            try {
+                // Note: Real USB gadget emulation via browser is limited.
+                // We use WebUSB to 'act' as a device that the Android app can talk to.
+                log("Requesting USB access...");
+                const device = await navigator.usb.requestDevice({ filters: [] });
+
+                log(`Connected to: ${device.productName}`);
+                log(`Emulating ${currentMode.toUpperCase()}...`);
+
+                const data = {
+                    mfr: document.getElementById('mfr').value,
+                    model: document.getElementById('model').value,
+                    build: document.getElementById('build').value,
+                    abi: document.getElementById('abi').value,
+                    unlocked: document.getElementById('bootloader').value === 'unlocked'
+                };
+
+                log(`Sending device info: ${data.model}`);
+                // In a real scenario, we would implement the ADB/Fastboot wire protocol here
+                // For this test mode, we'll simulate the protocol response loop
+                setInterval(() => {
+                    log(`Responding to ${currentMode.toUpperCase()} GETVAR...`);
+                }, 3000);
+
+            } catch (err) {
+                log(`Error: ${err.message}`);
+                log("Tip: Ensure you are using Chrome/Edge and have 'Experimental Web Platform features' enabled.");
+            }
+        }
+    </script>
+</body>
+</html>
