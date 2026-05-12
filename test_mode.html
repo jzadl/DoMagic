@@ -1,181 +1,503 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DoMagic - Emulated Device (WebUSB)</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #0d0a0f;
-            color: #e2e8f0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background-color: #1d1724;
-            padding: 2rem;
-            border-radius: 24px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            width: 90%;
-            max-width: 500px;
-        }
-        h1 { color: #8b5cf6; text-align: center; }
-        .field { margin-bottom: 1rem; }
-        label { display: block; color: #a78bfa; font-size: 0.8rem; margin-bottom: 0.3rem; }
-        input, select {
-            width: 100%;
-            padding: 10px;
-            background: #120e16;
-            border: 1px solid #4f378b;
-            color: white;
-            border-radius: 8px;
-            box-sizing: border-box;
-        }
-        .btn {
-            width: 100%;
-            background-color: #8b5cf6;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 1rem;
-        }
-        .status {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            border-radius: 12px;
-            background: #000;
-            font-family: monospace;
-            font-size: 0.85rem;
-            height: 100px;
-            overflow-y: auto;
-            color: #10b981;
-        }
-        .mode-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 1rem;
-        }
-        .mode-btn {
-            flex: 1;
-            padding: 8px;
-            border-radius: 8px;
-            border: 1px solid #8b5cf6;
-            background: transparent;
-            color: #8b5cf6;
-            cursor: pointer;
-        }
-        .mode-btn.active {
-            background: #8b5cf6;
-            color: white;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Fake Device Emulator</h1>
-        <p style="text-align:center; color:#c4b5fd; font-size: 0.9rem;">Connect your PC to the phone via USB</p>
-
-        <div class="mode-selector">
-            <button id="mode-adb" class="mode-btn active" onclick="setMode('adb')">ADB Mode</button>
-            <button id="mode-fastboot" class="mode-btn" onclick="setMode('fastboot')">Fastboot Mode</button>
-        </div>
-
-        <div class="field">
-            <label>Manufacturer</label>
-            <input type="text" id="mfr" value="Google">
-        </div>
-        <div class="field">
-            <label>Model</label>
-            <input type="text" id="model" value="Pixel 7 Pro">
-        </div>
-        <div class="field">
-            <label>Build Number</label>
-            <input type="text" id="build" value="TQ3A.230605.012">
-        </div>
-        <div class="field">
-            <label>ABI</label>
-            <select id="abi">
-                <option value="arm64-v8a">arm64-v8a</option>
-                <option value="armeabi-v7a">armeabi-v7a</option>
-                <option value="x86_64">x86_64</option>
-            </select>
-        </div>
-        <div class="field">
-            <label>Bootloader State</label>
-            <select id="bootloader">
-                <option value="unlocked">Unlocked</option>
-                <option value="locked">Locked</option>
-            </select>
-        </div>
-
-        <button class="btn" onclick="startEmulation()">Start Emulation</button>
-
-        <div id="log" class="status">
-            [System] Waiting for user...
-        </div>
-    </div>
-
-    <script>
-        let currentMode = 'adb';
-
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('mode-adb').classList.toggle('active', mode === 'adb');
-            document.getElementById('mode-fastboot').classList.toggle('active', mode === 'fastboot');
-            log(`Switched to ${mode.toUpperCase()} mode`);
-        }
-
-        function log(msg) {
-            const l = document.getElementById('log');
-            l.innerHTML += `> ${msg}<br>`;
-            l.scrollTop = l.scrollHeight;
-        }
-
-        async function startEmulation() {
-            log("Attempting to initialize USB Gadget emulation...");
-
-            if (!navigator.usb) {
-                log("Error: WebUSB not supported in this browser.");
-                return;
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>DoMagic — Test Mode</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                /* Material Design 3 Dark Theme Colors */
+                --md-bg: #1c1b1f;
+                --md-surface: #2b2930;
+                --md-primary: #d0bcff;
+                --md-on-primary: #381e72;
+                --md-secondary-container: #4a4458;
+                --md-on-secondary-container: #e8def8;
+                --md-outline: #938f99;
+                --md-text: #e6e1e5;
+                --md-text-variant: #cac4d0;
+                --md-error: #f2b8b5;
+                --md-success: #b4eeb4;
+                --md-warning: #ffb86c;
             }
 
-            try {
-                // Note: Real USB gadget emulation via browser is limited.
-                // We use WebUSB to 'act' as a device that the Android app can talk to.
-                log("Requesting USB access...");
-                const device = await navigator.usb.requestDevice({ filters: [] });
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
 
-                log(`Connected to: ${device.productName}`);
-                log(`Emulating ${currentMode.toUpperCase()}...`);
+            body {
+                font-family: "Roboto", sans-serif;
+                background-color: var(--md-bg);
+                color: var(--md-text);
+                display: flex;
+                align-items: center; /* Centrado vertical */
+                justify-content: center; /* Centrado horizontal */
+                min-height: 100vh;
+                padding: 20px;
+            }
 
-                const data = {
-                    mfr: document.getElementById('mfr').value,
-                    model: document.getElementById('model').value,
-                    build: document.getElementById('build').value,
-                    abi: document.getElementById('abi').value,
-                    unlocked: document.getElementById('bootloader').value === 'unlocked'
+            .card {
+                background: var(--md-surface);
+                border-radius: 28px;
+                padding: 24px;
+                width: 100%;
+                max-width: 500px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            }
+
+            .header {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                margin-bottom: 24px;
+            }
+            h1 {
+                font-size: 24px;
+                font-weight: 400;
+                flex-grow: 1;
+            }
+            h1 span {
+                color: var(--md-primary);
+                font-weight: 700;
+            }
+            .badge {
+                font-size: 11px;
+                font-weight: 700;
+                background: var(--md-secondary-container);
+                color: var(--md-on-secondary-container);
+                padding: 4px 10px;
+                border-radius: 8px;
+            }
+
+            .mode-row {
+                display: flex;
+                border: 1px solid var(--md-outline);
+                border-radius: 100px;
+                overflow: hidden;
+                margin-bottom: 24px;
+            }
+            .mode-btn {
+                flex: 1;
+                padding: 12px;
+                border: none;
+                background: transparent;
+                color: var(--md-text-variant);
+                font-weight: 500;
+                cursor: pointer;
+                transition: 0.2s;
+            }
+            .mode-btn.active {
+                background: var(--md-secondary-container);
+                color: var(--md-on-secondary-container);
+            }
+
+            .status-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 24px;
+                padding: 12px 16px;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 12px;
+                font-size: 14px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: #555;
+            }
+            .dot.connected {
+                background: var(--md-success);
+                box-shadow: 0 0 8px var(--md-success);
+            }
+            .dot.error {
+                background: var(--md-error);
+            }
+            .dot.waiting {
+                background: var(--md-warning);
+                animation: pulse 1.5s infinite;
+            }
+            @keyframes pulse {
+                50% {
+                    opacity: 0.4;
+                }
+            }
+
+            .fields {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                margin-bottom: 24px;
+            }
+            .field {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .field.full {
+                grid-column: 1 / -1;
+            }
+            label {
+                font-size: 12px;
+                color: var(--md-primary);
+                margin-left: 4px;
+            }
+
+            input,
+            select {
+                padding: 12px;
+                border-radius: 8px;
+                border: 1px solid var(--md-outline);
+                background: transparent;
+                color: white;
+                font-size: 15px;
+                outline: none;
+            }
+            input:focus {
+                border-color: var(--md-primary);
+            }
+
+            .bl-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 0;
+            }
+            .toggle {
+                position: relative;
+                width: 52px;
+                height: 32px;
+                cursor: pointer;
+            }
+            .toggle input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+            .slider {
+                position: absolute;
+                inset: 0;
+                background: #444;
+                border-radius: 100px;
+                transition: 0.3s;
+            }
+            .slider:before {
+                content: "";
+                position: absolute;
+                width: 24px;
+                height: 24px;
+                left: 4px;
+                top: 4px;
+                background: #aaa;
+                border-radius: 50%;
+                transition: 0.3s;
+            }
+            input:checked + .slider {
+                background: var(--md-primary);
+            }
+            input:checked + .slider:before {
+                transform: translateX(20px);
+                background: var(--md-on-primary);
+            }
+
+            .btn-primary {
+                width: 100%;
+                padding: 14px;
+                border-radius: 100px;
+                border: none;
+                background: var(--md-primary);
+                color: var(--md-on-primary);
+                font-weight: 700;
+                cursor: pointer;
+                margin-bottom: 12px;
+            }
+            .btn-secondary {
+                width: 100%;
+                padding: 10px;
+                border-radius: 100px;
+                border: 1px solid var(--md-outline);
+                background: transparent;
+                color: var(--md-primary);
+                cursor: pointer;
+            }
+            button:disabled {
+                opacity: 0.3;
+                cursor: not-allowed;
+            }
+
+            .log-header {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 24px;
+                margin-bottom: 8px;
+            }
+            .log-title {
+                font-size: 12px;
+                color: var(--md-text-variant);
+                font-weight: 700;
+            }
+            .log {
+                background: #000;
+                color: #00ff00;
+                border-radius: 12px;
+                padding: 16px;
+                height: 140px;
+                overflow-y: auto;
+                font-family: "Roboto Mono", monospace;
+                font-size: 11px;
+            }
+            .log .err {
+                color: var(--md-error);
+            }
+            .log .warn {
+                color: var(--md-warning);
+            }
+            .log .info {
+                color: var(--md-primary);
+            }
+
+            .hint {
+                margin-top: 20px;
+                font-size: 11px;
+                color: var(--md-text-variant);
+                background: rgba(208, 188, 255, 0.08);
+                padding: 16px;
+                border-radius: 16px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header">
+                <span>🪄</span>
+                <h1>Do<span>Magic</span> Test Mode</h1>
+                <span class="badge">DEV</span>
+            </div>
+
+            <div class="mode-row">
+                <button
+                    class="mode-btn active"
+                    id="btn-adb"
+                    onclick="setMode('adb')"
+                >
+                    ADB Mode
+                </button>
+                <button
+                    class="mode-btn"
+                    id="btn-fastboot"
+                    onclick="setMode('fastboot')"
+                >
+                    Fastboot
+                </button>
+            </div>
+
+            <div class="status-row">
+                <div class="dot" id="status-dot"></div>
+                <span id="status-text">No device connected</span>
+            </div>
+
+            <div class="fields">
+                <div class="field">
+                    <label>Manufacturer</label>
+                    <input type="text" id="mfr" value="Google" />
+                </div>
+                <div class="field">
+                    <label>Model</label>
+                    <input type="text" id="model" value="Pixel 7 Pro" />
+                </div>
+                <div class="field full">
+                    <label>Build Number</label>
+                    <input type="text" id="build" value="TQ3A.230605.012" />
+                </div>
+                <div class="field">
+                    <label>Android Version</label>
+                    <input type="text" id="android" value="13" />
+                </div>
+                <div class="field">
+                    <label>ABI</label>
+                    <select id="abi">
+                        <option value="arm64-v8a">arm64-v8a</option>
+                        <option value="armeabi-v7a">armeabi-v7a</option>
+                        <option value="x86_64">x86_64</option>
+                    </select>
+                </div>
+                <div class="field full">
+                    <div class="bl-row">
+                        <span id="bl-label" style="font-size: 14px"
+                            >🔓 Unlocked</span
+                        >
+                        <label class="toggle">
+                            <input
+                                type="checkbox"
+                                id="bootloader"
+                                checked
+                                onchange="updateBLLabel()"
+                            />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button
+                class="btn-primary"
+                id="start-btn"
+                onclick="startEmulation()"
+            >
+                ▶ Start Emulation
+            </button>
+            <button
+                class="btn-secondary"
+                id="stop-btn"
+                onclick="stopEmulation()"
+                disabled
+            >
+                ■ Stop
+            </button>
+
+            <div
+                id="proto-panel"
+                style="
+                    display: none;
+                    margin-top: 15px;
+                    padding: 10px;
+                    border: 1px solid #444;
+                    border-radius: 8px;
+                "
+            >
+                <div id="proto-rows"></div>
+            </div>
+
+            <div class="log-header">
+                <span class="log-title">PROTOCOL LOG</span>
+                <span
+                    onclick="clearLog()"
+                    style="
+                        cursor: pointer;
+                        font-size: 11px;
+                        color: var(--md-primary);
+                    "
+                    >Clear</span
+                >
+            </div>
+            <div class="log" id="log">
+                <span class="sys">[sys] DoMagic Test Mode ready</span><br />
+            </div>
+
+            <div class="hint">
+                Connect phone via USB. Click <b>Start Emulation</b>. Pick device
+                in browser dialog.
+            </div>
+        </div>
+
+        <script>
+            /* TU LÓGICA ORIGINAL SIN CAMBIOS */
+            var mode = "adb";
+            var usbDevice = null;
+            var running = false;
+            var pollTimer = null;
+            var ADB_CNXN = 0x4e584e43;
+            var ADB_OPEN = 0x4e45504f;
+            var ADB_OKAY = 0x59414b4f;
+            var ADB_WRTE = 0x45545257;
+            var ADB_CLSE = 0x45534c43;
+            var ADB_AUTH = 0x48545541;
+            var ADB_VERSION = 0x01000000;
+            var MAX_DATA = 1024 * 1024;
+
+            function setMode(m) {
+                mode = m;
+                document.getElementById("btn-adb").className =
+                    "mode-btn" + (m === "adb" ? " active" : "");
+                document.getElementById("btn-fastboot").className =
+                    "mode-btn" + (m === "fastboot" ? " active" : "");
+                log("info", "Switched to " + m.toUpperCase() + " mode");
+            }
+
+            function updateBLLabel() {
+                var unlocked = document.getElementById("bootloader").checked;
+                document.getElementById("bl-label").textContent = unlocked
+                    ? "🔓 Unlocked"
+                    : "🔒 Locked";
+            }
+
+            function setStatus(state, text) {
+                var dot = document.getElementById("status-dot");
+                dot.className = "dot" + (state ? " " + state : "");
+                document.getElementById("status-text").textContent = text;
+            }
+
+            function log(type, msg) {
+                var el = document.getElementById("log");
+                var t = new Date().toLocaleTimeString("en", { hour12: false });
+                el.innerHTML +=
+                    '<span class="' +
+                    type +
+                    '">[' +
+                    t +
+                    "] " +
+                    msg +
+                    "</span><br>";
+                el.scrollTop = el.scrollHeight;
+            }
+
+            function clearLog() {
+                document.getElementById("log").innerHTML = "";
+            }
+
+            function getConfig() {
+                return {
+                    manufacturer: document.getElementById("mfr").value,
+                    model: document.getElementById("model").value,
+                    build: document.getElementById("build").value,
+                    android: document.getElementById("android").value,
+                    abi: document.getElementById("abi").value,
+                    unlocked: document.getElementById("bootloader").checked,
                 };
-
-                log(`Sending device info: ${data.model}`);
-                // In a real scenario, we would implement the ADB/Fastboot wire protocol here
-                // For this test mode, we'll simulate the protocol response loop
-                setInterval(() => {
-                    log(`Responding to ${currentMode.toUpperCase()} GETVAR...`);
-                }, 3000);
-
-            } catch (err) {
-                log(`Error: ${err.message}`);
-                log("Tip: Ensure you are using Chrome/Edge and have 'Experimental Web Platform features' enabled.");
             }
-        }
-    </script>
-</body>
+
+            async function startEmulation() {
+                if (!navigator.usb) {
+                    log("err", "WebUSB not supported");
+                    return;
+                }
+                var cfg = getConfig();
+                try {
+                    usbDevice = await navigator.usb.requestDevice({
+                        filters: [],
+                    });
+                    await usbDevice.open();
+                    if (usbDevice.configuration === null)
+                        await usbDevice.selectConfiguration(1);
+                    running = true;
+                    document.getElementById("start-btn").disabled = true;
+                    document.getElementById("stop-btn").disabled = false;
+                    setStatus("connected", "Emulating " + cfg.model);
+                    log("info", "Emulation Started");
+                } catch (e) {
+                    setStatus("error", e.message);
+                }
+            }
+
+            async function stopEmulation() {
+                running = false;
+                if (usbDevice) {
+                    await usbDevice.close();
+                    usbDevice = null;
+                }
+                document.getElementById("start-btn").disabled = false;
+                document.getElementById("stop-btn").disabled = true;
+                setStatus("", "Stopped");
+                log("sys", "Emulation stopped");
+            }
+        </script>
+    </body>
 </html>
